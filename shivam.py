@@ -671,7 +671,7 @@ def edit_service_price_callback(call):
     user_states[user_id] = {'step': 'ADMIN_SET_PRICE', 'service_to_edit': srv_name}
     bot.answer_callback_query(call.id)
     bot.send_message(call.message.chat.id, f"💲 <b>{srv_name}</b> ka naya price (Coins) likh kar bhejein:", parse_mode="HTML")
-    if __name__ == "__main__":
+if __name__ == "__main__":
     init_db()
     print("✅ SQLite Database Initialized!")
     
