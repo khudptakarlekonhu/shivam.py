@@ -608,59 +608,98 @@ def process_service_select(call):
         parse_mode="HTML"
     )
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith("admin_"))
-def process_admin_callbacks(call):
-    user_id = call.from_user.id
-    if user_id != OWNER_ID:
-        bot.answer_callback_query(call.id, "❌ Access Denied!", show_alert=True)
-        return
-
-    action = call.data.replace("admin_", "")
-
-    if action == "stats":
-        total_users = get_total_users_count()
-        bot.send_message(call.message.chat.id, f"📊 <b>Bot Statistics:</b>\n\n👥 Total Users Joined: <code>{total_users}</code>", parse_mode="HTML")
+# ==================== ADMIN PANEL KEYBOARD ====================
+def send_admin_panel(chat_id):
+    markup = ReplyKeyboardMarkup(row_width=2, resize_keyboard=True)
     
-    elif action == "top_ref":
+    markup.add(
+        KeyboardButton("➕ Add Coins"),
+        KeyboardButton("➖ Remove Coins")
+    )
+    markup.add(
+        KeyboardButton("✏️ Set Exact Coins"),
+        KeyboardButton("📊 Total Users")
+    )
+    markup.add(
+        KeyboardButton("🏆 Top Referrals"),
+        KeyboardButton("👥 User Ref Stats")
+    )
+    markup.add(KeyboardButton("🎁 Change Referral Reward"))
+    markup.add(KeyboardButton("💲 Edit Service Prices"))
+    markup.add(KeyboardButton("📢 Broadcast (Msg for All)"))
+    markup.add(KeyboardButton("🎟️ Create Redeem Code"))
+
+    ref_reward = get_setting('referral_reward', 10)
+    bot.send_message(
+        chat_id,
+        f"👑 <b>Welcome Owner!</b>\n"
+        f"💡 Current Referral Reward: {ref_reward} Coins\n\n"
+        f"Niche se options select karein:",
+        reply_markup=markup,
+        parse_mode="HTML"
+    )
+
+# ==================== ADMIN BUTTON HANDLER ====================
+@bot.message_handler(func=lambda message: message.from_user.id == OWNER_ID and message.text in [
+    "➕ Add Coins", "➖ Remove Coins", "✏️ Set Exact Coins", "📊 Total Users",
+    "🏆 Top Referrals", "👥 User Ref Stats", "🎁 Change Referral Reward",
+    "💲 Edit Service Prices", "📢 Broadcast (Msg for All)", "🎟️ Create Redeem Code"
+])
+def process_admin_buttons(message):
+    user_id = message.from_user.id
+    text = message.text
+
+    if text == "📊 Total Users":
+        total_users = get_total_users_count()
+        bot.send_message(message.chat.id, f"📊 <b>Bot Statistics:</b>\n\n👥 Total Users Joined: <code>{total_users}</code>", parse_mode="HTML")
+    
+    elif text == "🏆 Top Referrals":
         top_list = get_top_referrals(10)
         if not top_list:
-            bot.send_message(call.message.chat.id, "ℹ️ Abhi tak kisi ne referral nahi kiya hai.")
+            bot.send_message(message.chat.id, "ℹ️ Abhi tak kisi ne referral nahi kiya hai.")
         else:
             msg = "🏆 <b>Top 10 Referrers List:</b>\n\n"
             for idx, item in enumerate(top_list, 1):
                 u_info = get_user(item[0])
                 uname = u_info[1] if u_info else "Unknown"
                 msg += f"{idx}. ID: <code>{item[0]}</code> (@{uname}) ➔ <b>{item[1]}</b> Referrals\n"
-            bot.send_message(call.message.chat.id, msg, parse_mode="HTML")
+            bot.send_message(message.chat.id, msg, parse_mode="HTML")
 
-    elif action == "user_ref_stats":
+    elif text == "👥 User Ref Stats":
         user_states[user_id] = {'step': 'ADMIN_CHECK_USER_REF'}
-        bot.send_message(call.message.chat.id, "🔍 Kripya target User ki <b>Telegram ID</b> enter karein:", parse_mode="HTML")
+        bot.send_message(message.chat.id, "🔍 Kripya target User ki <b>Telegram ID</b> enter karein:", parse_mode="HTML")
 
-    elif action in ["add_coins", "remove_coins", "set_coins"]:
-        act_type = action.replace("_coins", "")
-        user_states[user_id] = {'step': 'ADMIN_INPUT_COINS', 'action': act_type}
-        bot.send_message(call.message.chat.id, f"✏️ Type: <code>User_ID Coins</code>\n(Example: <code>123456789 100</code>)", parse_mode="HTML")
+    elif text == "➕ Add Coins":
+        user_states[user_id] = {'step': 'ADMIN_INPUT_COINS', 'action': 'add'}
+        bot.send_message(message.chat.id, "✏️ Type: <code>User_ID Coins</code>\n(Example: <code>123456789 100</code>)", parse_mode="HTML")
 
-    elif action == "set_ref":
+    elif text == "➖ Remove Coins":
+        user_states[user_id] = {'step': 'ADMIN_INPUT_COINS', 'action': 'remove'}
+        bot.send_message(message.chat.id, "✏️ Type: <code>User_ID Coins</code>\n(Example: <code>123456789 100</code>)", parse_mode="HTML")
+
+    elif text == "✏️ Set Exact Coins":
+        user_states[user_id] = {'step': 'ADMIN_INPUT_COINS', 'action': 'set'}
+        bot.send_message(message.chat.id, "✏️ Type: <code>User_ID Coins</code>\n(Example: <code>123456789 100</code>)", parse_mode="HTML")
+
+    elif text == "🎁 Change Referral Reward":
         user_states[user_id] = {'step': 'ADMIN_SET_REF'}
-        bot.send_message(call.message.chat.id, "🎁 Har referral par kitne Coins dene hain? Naya number type karke bhejein:")
+        bot.send_message(message.chat.id, "🎁 Har referral par kitne Coins dene hain? Naya number type karke bhejein:")
 
-    elif action == "edit_prices":
+    elif text == "💲 Edit Service Prices":
+        from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
         markup = InlineKeyboardMarkup()
         for srv in DEFAULT_PRICES.keys():
             markup.add(InlineKeyboardButton(f"✏️ {srv} ({get_service_price(srv)} Coins)", callback_data=f"editprice_{srv}"))
-        bot.send_message(call.message.chat.id, "🛠️ Jis service ka price change karna hai, uspar click karein:", reply_markup=markup)
+        bot.send_message(message.chat.id, "🛠️ Jis service ka price change karna hai, uspar click karein:", reply_markup=markup)
 
-    elif action == "broadcast":
+    elif text == "📢 Broadcast (Msg for All)":
         user_states[user_id] = {'step': 'ADMIN_BROADCAST_MSG'}
-        bot.send_message(call.message.chat.id, "📢 <b>Message for All Users</b>\n\nJo message sabhi users ko bhejna hai, use yahan type karke send karein:", parse_mode="HTML")
+        bot.send_message(message.chat.id, "📢 <b>Message for All Users</b>\n\nJo message sabhi users ko bhejna hai, use yahan type karke send karein:", parse_mode="HTML")
 
-    elif action == "create_code":
+    elif text == "🎟️ Create Redeem Code":
         user_states[user_id] = {'step': 'ADMIN_CREATE_CODE'}
-        bot.send_message(call.message.chat.id, "🎟️ Redeem Code is format me bhejein:\n\n<code>CODE COINS MAX_USERS</code>\n\n<i>Example:</i> <code>OFFER100 50 100</code>", parse_mode="HTML")
-
-    bot.answer_callback_query(call.id)
+        bot.send_message(message.chat.id, "🎟️ Redeem Code is format me bhejein:\n\n<code>CODE COINS MAX_USERS</code>\n\n<i>Example:</i> <code>OFFER100 50 100</code>", parse_mode="HTML")
+        
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("editprice_"))
 def edit_service_price_callback(call):
