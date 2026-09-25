@@ -23,7 +23,7 @@ def keep_alive():
     t.start()
 
 # ==================== CONFIGURATION ====================
-BOT_TOKEN = "8721485106:AAGaIJfOkrxEQlOmJWd7MxfYDy3wCw07v9I"
+BOT_TOKEN = "8721485106:AAF9XoGbDs1PNEPiTmHv6SFhX0z7qRcCu8M"
 OWNER_ID = 5647156798
 OWNER_USERNAME = "@sidxzz"
 
