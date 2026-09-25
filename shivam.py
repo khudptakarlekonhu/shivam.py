@@ -27,10 +27,11 @@ BOT_TOKEN = "8721485106:AAGaIJfOkrxEQlOmJWd7MxfYDy3wCw07v9I"
 OWNER_ID = 5647156798
 OWNER_USERNAME = "@sidxzz"
 
-# Verification Channels Details
+# Verification Channels Details (Total 3 Channels)
 CHANNELS = [
     {"username": "@ordermonitorbysid", "link": "https://t.me/ordermonitorbysid", "name": "Monitoring Channel"},
-    {"username": "@completed_ordersbysid", "link": "https://t.me/completed_ordersbysid", "name": "Completed Orders Channel"}
+    {"username": "@completed_ordersbysid", "link": "https://t.me/completed_ordersbysid", "name": "Completed Orders Channel"},
+    {"username": "@DRK_GARENA_INFO", "link": "https://t.me/DRK_GARENA_INFO", "name": "DRK Garena Info"}
 ]
 
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -70,7 +71,7 @@ MIN_ORDER_LIMITS = {
     "WhatsApp International Number": 1
 }
 
-# ==================== DATABASE SETUP ====================
+# ==================== DATABASE SETUP (SQLITE) ====================
 def init_db():
     conn = sqlite3.connect('social_bot.db')
     cursor = conn.cursor()
@@ -88,7 +89,21 @@ def init_db():
             value INTEGER
         )
     ''')
-    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS redeem_codes (
+            code TEXT PRIMARY KEY,
+            coins INTEGER,
+            max_uses INTEGER,
+            used_count INTEGER DEFAULT 0
+        )
+    ''')
+    cursor.execute('''
+            CREATE TABLE IF NOT EXISTS user_redeemed (
+            user_id INTEGER,
+            code TEXT,
+            PRIMARY KEY (user_id, code)
+        )
+    ''') 
     cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('referral_reward', 10)")
     for srv, price in DEFAULT_PRICES.items():
         cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (f"price_{srv}", price))
@@ -180,6 +195,50 @@ def get_user_referral_count(user_id):
     conn.close()
     return count
 
+def get_all_user_ids():
+    conn = sqlite3.connect('social_bot.db')
+    cursor = conn.cursor()
+    cursor.execute("SELECT user_id FROM users")
+    users = [row[0] for row in cursor.fetchall()]
+    conn.close()
+    return users
+
+# ==================== REDEEM CODE FUNCTIONS ====================
+def create_redeem_code(code, coins, max_uses):
+    conn = sqlite3.connect('social_bot.db')
+    cursor = conn.cursor()
+    cursor.execute("INSERT OR REPLACE INTO redeem_codes (code, coins, max_uses, used_count) VALUES (?, ?, ?, 0)", (code, coins, max_uses))
+    conn.commit()
+    conn.close()
+
+def use_redeem_code(user_id, code):
+    conn = sqlite3.connect('social_bot.db')
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT coins, max_uses, used_count FROM redeem_codes WHERE code = ?", (code,))
+    res = cursor.fetchone()
+    if not res:
+        conn.close()
+        return False, "❌ Ye Redeem Code invalid hai!"
+    
+    coins, max_uses, used_count = res
+    if used_count >= max_uses:
+        conn.close()
+        return False, "❌ Is Redeem Code ki limit khatam ho chuki hai!"
+    
+    cursor.execute("SELECT * FROM user_redeemed WHERE user_id = ? AND code = ?", (user_id, code))
+    if cursor.fetchone():
+        conn.close()
+        return False, "⚠️ Aapne is code ko pehle hi redeem kar liya hai!"
+    
+    cursor.execute("INSERT INTO user_redeemed (user_id, code) VALUES (?, ?)", (user_id, code))
+    cursor.execute("UPDATE redeem_codes SET used_count = used_count + 1 WHERE code = ?", (code,))
+    cursor.execute("UPDATE users SET coins = coins + ? WHERE user_id = ?", (coins, user_id))
+    
+    conn.commit()
+    conn.close()
+    return True, f"🎉 Mubarak ho! Aapko **+{coins} Coins** mil gaye hain!"
+
 # ==================== FORCE JOIN CHECKER ====================
 def is_user_joined(user_id):
     for ch in CHANNELS:
@@ -205,6 +264,7 @@ def main_menu(user_id):
     markup.add(KeyboardButton("▶️ YouTube"), KeyboardButton("💬 WhatsApp"))
     markup.add(KeyboardButton("✈️ Telegram"), KeyboardButton("👑 Owner Info"))
     markup.add(KeyboardButton("💰 My Balance"), KeyboardButton("🔗 Refer & Earn"))
+    markup.add(KeyboardButton("🎁 Redeem Code"))
     
     if user_id == OWNER_ID:
         markup.add(KeyboardButton("⚙️ Owner Control Panel"))
@@ -246,7 +306,7 @@ def get_whatsapp_menu():
     markup.add(InlineKeyboardButton(f"📢 Channel Members ({get_service_price('WhatsApp Channel Members')} Coins)", callback_data="srv_WhatsApp Channel Members"))
     markup.add(InlineKeyboardButton(f"🌐 Intl. Number ({get_service_price('WhatsApp International Number')} Coins)", callback_data="srv_WhatsApp International Number"))
     return markup
-
+    
 def owner_panel_keyboard():
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("➕ Add Coins", callback_data="admin_add_coins"), InlineKeyboardButton("➖ Remove Coins", callback_data="admin_remove_coins"))
@@ -254,7 +314,10 @@ def owner_panel_keyboard():
     markup.add(InlineKeyboardButton("🏆 Top Referrals", callback_data="admin_top_ref"), InlineKeyboardButton("👥 User Ref Stats", callback_data="admin_user_ref_stats"))
     markup.add(InlineKeyboardButton("🎁 Change Referral Reward", callback_data="admin_set_ref"))
     markup.add(InlineKeyboardButton("💲 Edit Service Prices", callback_data="admin_edit_prices"))
+    markup.add(InlineKeyboardButton("📢 Broadcast (Msg for All)", callback_data="admin_broadcast"))
+    markup.add(InlineKeyboardButton("🎟️ Create Redeem Code", callback_data="admin_create_code"))
     return markup
+
 # ==================== HANDLERS ====================
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -267,7 +330,7 @@ def start(message):
     if not is_user_joined(user_id):
         bot.send_message(
             message.chat.id,
-            f"⚠️ **Access Denied!**\n\nBot ko use karne ke liye aapko hamare dono official channels ko join karna hoga:\n\n1. {CHANNELS[0]['link']}\n2. {CHANNELS[1]['link']}\n\nJoin karne ke baad **Verify** button dabayein:",
+            f"⚠️ **Access Denied!**\n\nBot ko use karne ke liye aapko hamare sabhi teeno official channels ko join karna hoga:\n\n1. {CHANNELS[0]['link']}\n2. {CHANNELS[1]['link']}\n3. {CHANNELS[2]['link']}\n\nJoin karne ke baad **Verify / Joined All** button dabayein:",
             reply_markup=force_join_markup(),
             parse_mode="Markdown"
         )
@@ -298,7 +361,7 @@ def handle_menu(message):
     if not is_user_joined(user_id):
         bot.send_message(
             message.chat.id,
-            f"⚠️ **Access Denied!**\n\nKripya pehle dono channels join karein:",
+            f"⚠️ **Access Denied!**\n\nKripya pehle teeno channels join karein:",
             reply_markup=force_join_markup(),
             parse_mode="Markdown"
         )
@@ -327,7 +390,14 @@ def handle_menu(message):
         bot.send_message(message.chat.id, "👇 **Telegram Services** me se choose karein:", reply_markup=get_telegram_menu(), parse_mode="Markdown")
 
     elif text == "👑 Owner Info":
-        msg = f"👑 **Owner / Admin Details**\n\nSupport & Inquiries:\n👉 **Username:** {OWNER_USERNAME}\n👉 **Owner ID:** `{OWNER_ID}`\n👉 **Monitoring:** {CHANNELS[0]['link']}\n👉 **Completed Orders:** {CHANNELS[1]['link']}"
+        msg = (
+            f"👑 **Owner / Admin Details**\n\nSupport & Inquiries:\n"
+            f"👉 **Username:** {OWNER_USERNAME}\n"
+            f"👉 **Owner ID:** `{OWNER_ID}`\n"
+            f"👉 **Monitoring:** {CHANNELS[0]['link']}\n"
+            f"👉 **Completed Orders:** {CHANNELS[1]['link']}\n"
+            f"👉 **Garena Info:** {CHANNELS[2]['link']}"
+        )
         bot.send_message(message.chat.id, msg, parse_mode="Markdown")
 
     elif text == "💰 My Balance":
@@ -342,6 +412,10 @@ def handle_menu(message):
         msg = f"🎁 **Refer & Earn Coins**\n\nApne friends ko invite karein aur har referral par **{ref_reward} Coins** paayein!\n\n👥 Aapke Total Referrals: `{my_refs}` Users\n\nAapka Referral Link:\n`{ref_link}`"
         bot.send_message(message.chat.id, msg, parse_mode="Markdown")
 
+    elif text == "🎁 Redeem Code":
+        user_states[user_id] = {'step': 'WAITING_REDEEM_CODE'}
+        bot.send_message(message.chat.id, "🎟️ Apna **Redeem Code** enter karein:")
+
     elif text == "⚙️ Owner Control Panel":
         if user_id == OWNER_ID:
             ref_reward = get_setting('referral_reward', 10)
@@ -352,7 +426,13 @@ def handle_menu(message):
     elif user_id in user_states:
         state = user_states[user_id]
         
-        if state['step'] == 'WAITING_LINK':
+        if state['step'] == 'WAITING_REDEEM_CODE':
+            code_text = text.strip()
+            success, msg = use_redeem_code(user_id, code_text)
+            bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+            del user_states[user_id]
+
+        elif state['step'] == 'WAITING_LINK':
             state['link'] = text
             state['step'] = 'WAITING_QTY'
             unit_price = get_service_price(state['service'])
@@ -411,6 +491,38 @@ def handle_menu(message):
             except Exception:
                 bot.send_message(OWNER_ID, f"⚠️ Channel me order msg nahi gaya. Ensure bot Admin ho!\n\n{group_msg}", parse_mode="Markdown")
 
+            del user_states[user_id]
+
+        elif state['step'] == 'ADMIN_BROADCAST_MSG':
+            broadcast_msg = text
+            all_users = get_all_user_ids()
+            sent_count = 0
+            failed_count = 0
+            
+            bot.send_message(message.chat.id, f"⏳ Sending broadcast to `{len(all_users)}` users...")
+            
+            for uid in all_users:
+                try:
+                    bot.send_message(uid, f"📢 **Announcement from Admin:**\n\n{broadcast_msg}", parse_mode="Markdown")
+                    sent_count += 1
+                    time.sleep(0.05)
+                except Exception:
+                    failed_count += 1
+
+            bot.send_message(message.chat.id, f"✅ **Broadcast Completed!**\n\n🎯 Delivered: `{sent_count}` Users\n❌ Failed/Blocked: `{failed_count}` Users", parse_mode="Markdown")
+            del user_states[user_id]
+
+        elif state['step'] == 'ADMIN_CREATE_CODE':
+            try:
+                parts = text.split()
+                code = parts[0].upper()
+                coins = int(parts[1])
+                max_uses = int(parts[2])
+                
+                create_redeem_code(code, coins, max_uses)
+                bot.send_message(message.chat.id, f"✅ **Redeem Code Created Successfully!**\n\n🎟️ Code: `{code}`\n💰 Coins: `{coins}`\n👥 Max Uses Limit: `{max_uses}` Users", parse_mode="Markdown")
+            except Exception:
+                bot.send_message(message.chat.id, "❌ Incorrect Format! Use: `<CODE> <COINS> <MAX_USERS>`", parse_mode="Markdown")
             del user_states[user_id]
 
         elif state['step'] == 'ADMIN_INPUT_COINS':
@@ -515,8 +627,8 @@ def process_admin_callbacks(call):
             for idx, item in enumerate(top_list, 1):
                 u_info = get_user(item[0])
                 uname = u_info[1] if u_info else "Unknown"
-                msg += f"{idx}. ID: `{item[0]}` (@{uname}) ➔ **{item[1]}** Referrals\n"
-            bot.send_message(call.message.chat.id, msg, parse_mode="Markdown")
+                msg += f"{idx}. ID: `{item[0]}` (@{uname}) ➔ **{item[1]}** Refer
+                            bot.send_message(call.message.chat.id, msg, parse_mode="Markdown")
 
     elif action == "user_ref_stats":
         user_states[user_id] = {'step': 'ADMIN_CHECK_USER_REF'}
@@ -537,6 +649,14 @@ def process_admin_callbacks(call):
             markup.add(InlineKeyboardButton(f"✏️ {srv} ({get_service_price(srv)} Coins)", callback_data=f"editprice_{srv}"))
         bot.send_message(call.message.chat.id, "🛠️ Jis service ka price change karna hai, uspar click karein:", reply_markup=markup)
 
+    elif action == "broadcast":
+        user_states[user_id] = {'step': 'ADMIN_BROADCAST_MSG'}
+        bot.send_message(call.message.chat.id, "📢 **Message for All Users**\n\nJo message sabhi users ko bhejna hai, use yahan type karke send karein:")
+
+    elif action == "create_code":
+        user_states[user_id] = {'step': 'ADMIN_CREATE_CODE'}
+        bot.send_message(call.message.chat.id, "🎟️ Redeem Code is format me bhejein:\n\n`<CODE> <COINS> <MAX_USERS>`\n\n*Example:* `OFFER100 50 100`", parse_mode="Markdown")
+
     bot.answer_callback_query(call.id)
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("editprice_"))
@@ -552,16 +672,18 @@ def edit_service_price_callback(call):
 # ==================== MAIN EXECUTION ====================
 if __name__ == "__main__":
     init_db()
-    print("✅ Database Initialized!")
+    print("✅ SQLite Database Initialized!")
     
     keep_alive()
     print("🌐 Web Server Started for Render 24/7 Hosting!")
 
+    bot.remove_webhook()
+    time.sleep(1)
+
     while True:
         try:
-            bot.remove_webhook()
-            bot.infinity_polling(timeout=20, long_polling_timeout=10)
+            bot.infinity_polling(skip_pending_updates=True, timeout=20, long_polling_timeout=10)
         except Exception as e:
             print(f"❌ Error occurred: {e}")
             time.sleep(5)
-  
+    
