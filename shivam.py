@@ -98,12 +98,13 @@ def init_db():
         )
     ''')
     cursor.execute('''
-            CREATE TABLE IF NOT EXISTS user_redeemed (
+        CREATE TABLE IF NOT EXISTS user_redeemed (
             user_id INTEGER,
             code TEXT,
             PRIMARY KEY (user_id, code)
         )
-    ''') 
+    ''')
+    
     cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('referral_reward', 10)")
     for srv, price in DEFAULT_PRICES.items():
         cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (f"price_{srv}", price))
@@ -237,7 +238,7 @@ def use_redeem_code(user_id, code):
     
     conn.commit()
     conn.close()
-    return True, f"🎉 Mubarak ho! Aapko **+{coins} Coins** mil gaye hain!"
+    return True, f"🎉 Mubarak ho! Aapko <b>+{coins} Coins</b> mil gaye hain!"
 
 # ==================== FORCE JOIN CHECKER ====================
 def is_user_joined(user_id):
@@ -306,7 +307,7 @@ def get_whatsapp_menu():
     markup.add(InlineKeyboardButton(f"📢 Channel Members ({get_service_price('WhatsApp Channel Members')} Coins)", callback_data="srv_WhatsApp Channel Members"))
     markup.add(InlineKeyboardButton(f"🌐 Intl. Number ({get_service_price('WhatsApp International Number')} Coins)", callback_data="srv_WhatsApp International Number"))
     return markup
-    
+
 def owner_panel_keyboard():
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("➕ Add Coins", callback_data="admin_add_coins"), InlineKeyboardButton("➖ Remove Coins", callback_data="admin_remove_coins"))
@@ -330,9 +331,9 @@ def start(message):
     if not is_user_joined(user_id):
         bot.send_message(
             message.chat.id,
-            f"⚠️ **Access Denied!**\n\nBot ko use karne ke liye aapko hamare sabhi teeno official channels ko join karna hoga:\n\n1. {CHANNELS[0]['link']}\n2. {CHANNELS[1]['link']}\n3. {CHANNELS[2]['link']}\n\nJoin karne ke baad **Verify / Joined All** button dabayein:",
+            f"⚠️ <b>Access Denied!</b>\n\nBot ko use karne ke liye aapko hamare sabhi teeno official channels ko join karna hoga:\n\n1. {CHANNELS[0]['link']}\n2. {CHANNELS[1]['link']}\n3. {CHANNELS[2]['link']}\n\nJoin karne ke baad <b>Verify / Joined All</b> button dabayein:",
             reply_markup=force_join_markup(),
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
         return
 
@@ -361,9 +362,9 @@ def handle_menu(message):
     if not is_user_joined(user_id):
         bot.send_message(
             message.chat.id,
-            f"⚠️ **Access Denied!**\n\nKripya pehle teeno channels join karein:",
+            f"⚠️ <b>Access Denied!</b>\n\nKripya pehle teeno channels join karein:",
             reply_markup=force_join_markup(),
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
         return
 
@@ -375,51 +376,51 @@ def handle_menu(message):
     text = message.text
 
     if text == "📸 Instagram":
-        bot.send_message(message.chat.id, "👇 **Instagram Services** me se choose karein:", reply_markup=get_instagram_menu(), parse_mode="Markdown")
+        bot.send_message(message.chat.id, "👇 <b>Instagram Services</b> me se choose karein:", reply_markup=get_instagram_menu(), parse_mode="HTML")
 
     elif text == "📘 Facebook":
-        bot.send_message(message.chat.id, "👇 **Facebook Services** me se choose karein:", reply_markup=get_facebook_menu(), parse_mode="Markdown")
+        bot.send_message(message.chat.id, "👇 <b>Facebook Services</b> me se choose karein:", reply_markup=get_facebook_menu(), parse_mode="HTML")
 
     elif text == "▶️ YouTube":
-        bot.send_message(message.chat.id, "👇 **YouTube Services** me se choose karein:", reply_markup=get_youtube_menu(), parse_mode="Markdown")
+        bot.send_message(message.chat.id, "👇 <b>YouTube Services</b> me se choose karein:", reply_markup=get_youtube_menu(), parse_mode="HTML")
 
     elif text == "💬 WhatsApp":
-        bot.send_message(message.chat.id, "👇 **WhatsApp Services** me se choose karein:", reply_markup=get_whatsapp_menu(), parse_mode="Markdown")
+        bot.send_message(message.chat.id, "👇 <b>WhatsApp Services</b> me se choose karein:", reply_markup=get_whatsapp_menu(), parse_mode="HTML")
 
     elif text == "✈️ Telegram":
-        bot.send_message(message.chat.id, "👇 **Telegram Services** me se choose karein:", reply_markup=get_telegram_menu(), parse_mode="Markdown")
+        bot.send_message(message.chat.id, "👇 <b>Telegram Services</b> me se choose karein:", reply_markup=get_telegram_menu(), parse_mode="HTML")
 
     elif text == "👑 Owner Info":
         msg = (
-            f"👑 **Owner / Admin Details**\n\nSupport & Inquiries:\n"
-            f"👉 **Username:** {OWNER_USERNAME}\n"
-            f"👉 **Owner ID:** `{OWNER_ID}`\n"
-            f"👉 **Monitoring:** {CHANNELS[0]['link']}\n"
-            f"👉 **Completed Orders:** {CHANNELS[1]['link']}\n"
-            f"👉 **Garena Info:** {CHANNELS[2]['link']}"
+            f"👑 <b>Owner / Admin Details</b>\n\nSupport & Inquiries:\n"
+            f"👉 <b>Username:</b> {OWNER_USERNAME}\n"
+            f"👉 <b>Owner ID:</b> <code>{OWNER_ID}</code>\n"
+            f"👉 <b>Monitoring:</b> {CHANNELS[0]['link']}\n"
+            f"👉 <b>Completed Orders:</b> {CHANNELS[1]['link']}\n"
+            f"👉 <b>Garena Info:</b> {CHANNELS[2]['link']}"
         )
-        bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+        bot.send_message(message.chat.id, msg, parse_mode="HTML")
 
     elif text == "💰 My Balance":
         my_refs = get_user_referral_count(user_id)
-        bot.send_message(message.chat.id, f"💳 **Aapka Balance:** `{user[2]}` Coins\n👥 **Total Referrals:** `{my_refs}` Users", parse_mode="Markdown")
+        bot.send_message(message.chat.id, f"💳 <b>Aapka Balance:</b> <code>{user[2]}</code> Coins\n👥 <b>Total Referrals:</b> <code>{my_refs}</code> Users", parse_mode="HTML")
 
     elif text == "🔗 Refer & Earn":
         bot_info = bot.get_me()
         ref_reward = get_setting('referral_reward', 10)
         my_refs = get_user_referral_count(user_id)
         ref_link = f"https://t.me/{bot_info.username}?start={user_id}"
-        msg = f"🎁 **Refer & Earn Coins**\n\nApne friends ko invite karein aur har referral par **{ref_reward} Coins** paayein!\n\n👥 Aapke Total Referrals: `{my_refs}` Users\n\nAapka Referral Link:\n`{ref_link}`"
-        bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+        msg = f"🎁 <b>Refer & Earn Coins</b>\n\nApne friends ko invite karein aur har referral par <b>{ref_reward} Coins</b> paayein!\n\n👥 Aapke Total Referrals: <code>{my_refs}</code> Users\n\nAapka Referral Link:\n<code>{ref_link}</code>"
+        bot.send_message(message.chat.id, msg, parse_mode="HTML")
 
     elif text == "🎁 Redeem Code":
         user_states[user_id] = {'step': 'WAITING_REDEEM_CODE'}
-        bot.send_message(message.chat.id, "🎟️ Apna **Redeem Code** enter karein:")
+        bot.send_message(message.chat.id, "🎟️ Apna <b>Redeem Code</b> enter karein:", parse_mode="HTML")
 
     elif text == "⚙️ Owner Control Panel":
         if user_id == OWNER_ID:
             ref_reward = get_setting('referral_reward', 10)
-            bot.send_message(message.chat.id, f"👑 **Welcome Owner!**\n💡 Current Referral Reward: `{ref_reward}` Coins\nNiche se options select karein:", reply_markup=owner_panel_keyboard(), parse_mode="Markdown")
+            bot.send_message(message.chat.id, f"👑 <b>Welcome Owner!</b>\n💡 Current Referral Reward: <code>{ref_reward}</code> Coins\nNiche se options select karein:", reply_markup=owner_panel_keyboard(), parse_mode="HTML")
         else:
             bot.send_message(message.chat.id, "❌ Access Denied!")
 
@@ -429,7 +430,7 @@ def handle_menu(message):
         if state['step'] == 'WAITING_REDEEM_CODE':
             code_text = text.strip()
             success, msg = use_redeem_code(user_id, code_text)
-            bot.send_message(message.chat.id, msg, parse_mode="Markdown")
+            bot.send_message(message.chat.id, msg, parse_mode="HTML")
             del user_states[user_id]
 
         elif state['step'] == 'WAITING_LINK':
@@ -437,7 +438,7 @@ def handle_menu(message):
             state['step'] = 'WAITING_QTY'
             unit_price = get_service_price(state['service'])
             min_limit = MIN_ORDER_LIMITS.get(state['service'], 10)
-            bot.send_message(message.chat.id, f"🔢 Ab **Quantity** (sankhya) likhein.\n💡 Rate: `{unit_price}` Coins per item\n⚠️ **Minimum Limit:** `{min_limit}` Quantity Required!")
+            bot.send_message(message.chat.id, f"🔢 Ab <b>Quantity</b> (sankhya) likhein.\n💡 Rate: <code>{unit_price}</code> Coins per item\n⚠️ <b>Minimum Limit:</b> <code>{min_limit}</code> Quantity Required!", parse_mode="HTML")
 
         elif state['step'] == 'WAITING_QTY':
             if not text.isdigit():
@@ -448,7 +449,7 @@ def handle_menu(message):
             min_limit = MIN_ORDER_LIMITS.get(state['service'], 10)
 
             if qty < min_limit:
-                bot.send_message(message.chat.id, f"❌ **Quantity bohot kam hai!**\nIs service me aap **{min_limit}** se kam ka order nahi laga sakte.")
+                bot.send_message(message.chat.id, f"❌ <b>Quantity bohot kam hai!</b>\nIs service me aap <b>{min_limit}</b> se kam ka order nahi laga sakte.", parse_mode="HTML")
                 return
 
             unit_price = get_service_price(state['service'])
@@ -457,9 +458,10 @@ def handle_menu(message):
             if user[2] < total_cost:
                 bot.send_message(
                     message.chat.id, 
-                    f"❌ **Aapke paas kaafi coins nahi hain!**\n\n"
-                    f"💳 Total Cost: `{total_cost}` Coins\n"
-                    f"🪙 Aapke Coins: `{user[2]}` Coins"
+                    f"❌ <b>Aapke paas kaafi coins nahi hain!</b>\n\n"
+                    f"💳 Total Cost: <code>{total_cost}</code> Coins\n"
+                    f"🪙 Aapke Coins: <code>{user[2]}</code> Coins",
+                    parse_mode="HTML"
                 )
                 del user_states[user_id]
                 return
@@ -468,28 +470,29 @@ def handle_menu(message):
 
             bot.send_message(
                 message.chat.id,
-                f"✅ **Order Successfully Placed!**\n\n"
-                f"📌 **Service:** {state['service']}\n"
-                f"🔗 **Target:** {state['link']}\n"
-                f"🔢 **Quantity:** {qty}\n"
-                f"💰 **Total Coins Deducted:** {total_cost}\n\n"
-                f"🚀 Admin aapka order jald hi complete karega!"
+                f"✅ <b>Order Successfully Placed!</b>\n\n"
+                f"📌 <b>Service:</b> {state['service']}\n"
+                f"🔗 <b>Target:</b> {state['link']}\n"
+                f"🔢 <b>Quantity:</b> {qty}\n"
+                f"💰 <b>Total Coins Deducted:</b> {total_cost}\n\n"
+                                f"🚀 Admin aapka order jald hi complete karega!",
+                parse_mode="HTML"
             )
 
             group_msg = (
-                f"🚨 **NEW ORDER RECEIVED!** 🚨\n\n"
-                f"👤 **User:** @{message.from_user.username or 'No_Username'} (ID: `{user_id}`)\n"
-                f"🛠️ **Service:** {state['service']}\n"
-                f"🔗 **Link/Data:** `{state['link']}`\n"
-                f"🔢 **Quantity:** {qty}\n"
-                f"💰 **Coins Deducted:** {total_cost}\n"
-                f"📊 **Remaining Coins:** {user[2] - total_cost}\n\n"
-                f"⚡ *Kripya is order ko complete karein!*"
+                f"🚨 <b>NEW ORDER RECEIVED!</b> 🚨\n\n"
+                f"👤 <b>User:</b> @{message.from_user.username or 'No_Username'} (ID: <code>{user_id}</code>)\n"
+                f"🛠️ <b>Service:</b> {state['service']}\n"
+                f"🔗 <b>Link/Data:</b> <code>{state['link']}</code>\n"
+                f"🔢 <b>Quantity:</b> {qty}\n"
+                f"💰 <b>Coins Deducted:</b> {total_cost}\n"
+                f"📊 <b>Remaining Coins:</b> {user[2] - total_cost}\n\n"
+                f"⚡ <i>Kripya is order ko complete karein!</i>"
             )
             try:
-                bot.send_message(CHANNELS[0]['username'], group_msg, parse_mode="Markdown")
+                bot.send_message(CHANNELS[0]['username'], group_msg, parse_mode="HTML")
             except Exception:
-                bot.send_message(OWNER_ID, f"⚠️ Channel me order msg nahi gaya. Ensure bot Admin ho!\n\n{group_msg}", parse_mode="Markdown")
+                bot.send_message(OWNER_ID, f"⚠️ Channel me order msg nahi gaya. Ensure bot Admin ho!\n\n{group_msg}", parse_mode="HTML")
 
             del user_states[user_id]
 
@@ -499,17 +502,17 @@ def handle_menu(message):
             sent_count = 0
             failed_count = 0
             
-            bot.send_message(message.chat.id, f"⏳ Sending broadcast to `{len(all_users)}` users...")
+            bot.send_message(message.chat.id, f"⏳ Sending broadcast to <code>{len(all_users)}</code> users...", parse_mode="HTML")
             
             for uid in all_users:
                 try:
-                    bot.send_message(uid, f"📢 **Announcement from Admin:**\n\n{broadcast_msg}", parse_mode="Markdown")
+                    bot.send_message(uid, f"📢 <b>Announcement from Admin:</b>\n\n{broadcast_msg}", parse_mode="HTML")
                     sent_count += 1
                     time.sleep(0.05)
                 except Exception:
                     failed_count += 1
 
-            bot.send_message(message.chat.id, f"✅ **Broadcast Completed!**\n\n🎯 Delivered: `{sent_count}` Users\n❌ Failed/Blocked: `{failed_count}` Users", parse_mode="Markdown")
+            bot.send_message(message.chat.id, f"✅ <b>Broadcast Completed!</b>\n\n🎯 Delivered: <code>{sent_count}</code> Users\n❌ Failed/Blocked: <code>{failed_count}</code> Users", parse_mode="HTML")
             del user_states[user_id]
 
         elif state['step'] == 'ADMIN_CREATE_CODE':
@@ -520,9 +523,9 @@ def handle_menu(message):
                 max_uses = int(parts[2])
                 
                 create_redeem_code(code, coins, max_uses)
-                bot.send_message(message.chat.id, f"✅ **Redeem Code Created Successfully!**\n\n🎟️ Code: `{code}`\n💰 Coins: `{coins}`\n👥 Max Uses Limit: `{max_uses}` Users", parse_mode="Markdown")
+                bot.send_message(message.chat.id, f"✅ <b>Redeem Code Created Successfully!</b>\n\n🎟️ Code: <code>{code}</code>\n💰 Coins: <code>{coins}</code>\n👥 Max Uses Limit: <code>{max_uses}</code> Users", parse_mode="HTML")
             except Exception:
-                bot.send_message(message.chat.id, "❌ Incorrect Format! Use: `<CODE> <COINS> <MAX_USERS>`", parse_mode="Markdown")
+                bot.send_message(message.chat.id, "❌ Incorrect Format! Use: <code>CODE COINS MAX_USERS</code>", parse_mode="HTML")
             del user_states[user_id]
 
         elif state['step'] == 'ADMIN_INPUT_COINS':
@@ -534,16 +537,16 @@ def handle_menu(message):
 
                 if action == 'add':
                     update_coins(target_user, amount)
-                    bot.send_message(message.chat.id, f"✅ `{amount}` Coins Added to User `{target_user}`.")
+                    bot.send_message(message.chat.id, f"✅ <code>{amount}</code> Coins Added to User <code>{target_user}</code>.", parse_mode="HTML")
                 elif action == 'remove':
                     update_coins(target_user, -amount)
-                    bot.send_message(message.chat.id, f"✅ `{amount}` Coins Deducted from User `{target_user}`.")
+                    bot.send_message(message.chat.id, f"✅ <code>{amount}</code> Coins Deducted from User <code>{target_user}</code>.", parse_mode="HTML")
                 elif action == 'set':
                     set_exact_coins(target_user, amount)
-                    bot.send_message(message.chat.id, f"✅ User `{target_user}` balance set to `{amount}` Coins.")
+                    bot.send_message(message.chat.id, f"✅ User <code>{target_user}</code> balance set to <code>{amount}</code> Coins.", parse_mode="HTML")
 
             except Exception:
-                bot.send_message(message.chat.id, "❌ Format: `<User_ID> <Coins>`\nExample: `123456789 100`", parse_mode="Markdown")
+                bot.send_message(message.chat.id, "❌ Format: <code>User_ID Coins</code>\nExample: <code>123456789 100</code>", parse_mode="HTML")
             del user_states[user_id]
 
         elif state['step'] == 'ADMIN_CHECK_USER_REF':
@@ -555,12 +558,12 @@ def handle_menu(message):
                     ref_by = u[3] if u[3] else "None (Direct Joined)"
                     bot.send_message(
                         message.chat.id,
-                        f"👤 **User Details for ID:** `{target_id}`\n\n"
+                        f"👤 <b>User Details for ID:</b> <code>{target_id}</code>\n\n"
                         f"📛 Username: @{u[1]}\n"
-                        f"💰 Balance: `{u[2]}` Coins\n"
-                        f"👥 Total Referred: `{c}` Users\n"
-                        f"🔗 Referred By User ID: `{ref_by}`",
-                        parse_mode="Markdown"
+                        f"💰 Balance: <code>{u[2]}</code> Coins\n"
+                        f"👥 Total Referred: <code>{c}</code> Users\n"
+                        f"🔗 Referred By User ID: <code>{ref_by}</code>",
+                        parse_mode="HTML"
                     )
                 else:
                     bot.send_message(message.chat.id, "❌ User database me nahi mila!")
@@ -572,7 +575,7 @@ def handle_menu(message):
             if text.isdigit():
                 val = int(text)
                 set_setting('referral_reward', val)
-                bot.send_message(message.chat.id, f"✅ Referral Reward set to `{val}` Coins!", parse_mode="Markdown")
+                bot.send_message(message.chat.id, f"✅ Referral Reward set to <code>{val}</code> Coins!", parse_mode="HTML")
             else:
                 bot.send_message(message.chat.id, "❌ Sirf number type karein!")
             del user_states[user_id]
@@ -582,7 +585,7 @@ def handle_menu(message):
                 val = int(text)
                 srv = state['service_to_edit']
                 set_setting(f"price_{srv}", val)
-                bot.send_message(message.chat.id, f"✅ **{srv}** price set to `{val}` Coins per unit!", parse_mode="Markdown")
+                bot.send_message(message.chat.id, f"✅ <b>{srv}</b> price set to <code>{val}</code> Coins per unit!", parse_mode="HTML")
             else:
                 bot.send_message(message.chat.id, "❌ Sirf number type karein!")
             del user_states[user_id]
@@ -600,9 +603,9 @@ def process_service_select(call):
     bot.answer_callback_query(call.id)
     bot.send_message(
         call.message.chat.id,
-        f"🎯 Selected Service: **{service_name}**\n\n"
-        f"🔗 Kripya apna **Target Link / Username / Details** bhejein:",
-        parse_mode="Markdown"
+        f"🎯 Selected Service: <b>{service_name}</b>\n\n"
+        f"🔗 Kripya apna <b>Target Link / Username / Details</b> bhejein:",
+        parse_mode="HTML"
     )
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith("admin_"))
@@ -616,28 +619,28 @@ def process_admin_callbacks(call):
 
     if action == "stats":
         total_users = get_total_users_count()
-        bot.send_message(call.message.chat.id, f"📊 **Bot Statistics:**\n\n👥 Total Users Joined: `{total_users}`", parse_mode="Markdown")
+        bot.send_message(call.message.chat.id, f"📊 <b>Bot Statistics:</b>\n\n👥 Total Users Joined: <code>{total_users}</code>", parse_mode="HTML")
     
     elif action == "top_ref":
         top_list = get_top_referrals(10)
         if not top_list:
             bot.send_message(call.message.chat.id, "ℹ️ Abhi tak kisi ne referral nahi kiya hai.")
         else:
-            msg = "🏆 **Top 10 Referrers List:**\n\n"
+            msg = "🏆 <b>Top 10 Referrers List:</b>\n\n"
             for idx, item in enumerate(top_list, 1):
                 u_info = get_user(item[0])
                 uname = u_info[1] if u_info else "Unknown"
-                msg += f"{idx}. ID: `{item[0]}` (@{uname}) ➔ **{item[1]}** Refer
-                            bot.send_message(call.message.chat.id, msg, parse_mode="Markdown")
+                msg += f"{idx}. ID: <code>{item[0]}</code> (@{uname}) ➔ <b>{item[1]}</b> Referrals\n"
+            bot.send_message(call.message.chat.id, msg, parse_mode="HTML")
 
     elif action == "user_ref_stats":
         user_states[user_id] = {'step': 'ADMIN_CHECK_USER_REF'}
-        bot.send_message(call.message.chat.id, "🔍 Kripya target User ki **Telegram ID** enter karein:")
+        bot.send_message(call.message.chat.id, "🔍 Kripya target User ki <b>Telegram ID</b> enter karein:", parse_mode="HTML")
 
     elif action in ["add_coins", "remove_coins", "set_coins"]:
         act_type = action.replace("_coins", "")
         user_states[user_id] = {'step': 'ADMIN_INPUT_COINS', 'action': act_type}
-        bot.send_message(call.message.chat.id, f"✏️ Type: `User_ID Coins`\n(Example: `123456789 100`)", parse_mode="Markdown")
+        bot.send_message(call.message.chat.id, f"✏️ Type: <code>User_ID Coins</code>\n(Example: <code>123456789 100</code>)", parse_mode="HTML")
 
     elif action == "set_ref":
         user_states[user_id] = {'step': 'ADMIN_SET_REF'}
@@ -651,11 +654,11 @@ def process_admin_callbacks(call):
 
     elif action == "broadcast":
         user_states[user_id] = {'step': 'ADMIN_BROADCAST_MSG'}
-        bot.send_message(call.message.chat.id, "📢 **Message for All Users**\n\nJo message sabhi users ko bhejna hai, use yahan type karke send karein:")
+        bot.send_message(call.message.chat.id, "📢 <b>Message for All Users</b>\n\nJo message sabhi users ko bhejna hai, use yahan type karke send karein:", parse_mode="HTML")
 
     elif action == "create_code":
         user_states[user_id] = {'step': 'ADMIN_CREATE_CODE'}
-        bot.send_message(call.message.chat.id, "🎟️ Redeem Code is format me bhejein:\n\n`<CODE> <COINS> <MAX_USERS>`\n\n*Example:* `OFFER100 50 100`", parse_mode="Markdown")
+        bot.send_message(call.message.chat.id, "🎟️ Redeem Code is format me bhejein:\n\n<code>CODE COINS MAX_USERS</code>\n\n<i>Example:</i> <code>OFFER100 50 100</code>", parse_mode="HTML")
 
     bot.answer_callback_query(call.id)
 
@@ -667,7 +670,7 @@ def edit_service_price_callback(call):
     srv_name = call.data.replace("editprice_", "")
     user_states[user_id] = {'step': 'ADMIN_SET_PRICE', 'service_to_edit': srv_name}
     bot.answer_callback_query(call.id)
-    bot.send_message(call.message.chat.id, f"💲 **{srv_name}** ka naya price (Coins) likh kar bhejein:")
+    bot.send_message(call.message.chat.id, f"💲 <b>{srv_name}</b> ka naya price (Coins) likh kar bhejein:", parse_mode="HTML")
 
 # ==================== MAIN EXECUTION ====================
 if __name__ == "__main__":
@@ -686,4 +689,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"❌ Error occurred: {e}")
             time.sleep(5)
-    
+        
