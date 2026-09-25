@@ -135,26 +135,33 @@ def get_user(user_id):
 def add_user(user_id, username, referred_by=None):
     conn = sqlite3.connect('social_bot.db')
     cursor = conn.cursor()
-    cursor.execute("INSERT OR IGNORE INTO users (user_id, username, coins, referred_by) VALUES (?, ?, ?, ?)",
-                   (user_id, username, 0, referred_by))
     
-    ref_reward = get_setting('referral_reward', 10)
-    if referred_by and referred_by != user_id:
+    cursor.execute("SELECT referred_by FROM users WHERE user_id = ?", (user_id,))
+    existing_user = cursor.fetchone()
+    
+    if not existing_user:
+        cursor.execute("INSERT INTO users (user_id, username, coins, referred_by) VALUES (?, ?, ?, ?)",
+                       (user_id, username, 0, referred_by))
+        
+        ref_reward = get_setting('referral_reward', 10)
+        if referred_by and referred_by != user_id:
+            cursor.execute("UPDATE users SET coins = coins + ? WHERE user_id = ?", (ref_reward, referred_by))
+            try:
+                bot.send_message(referred_by, f"🎉 Aapke link se kisi ne join kiya! Aapko +{ref_reward} Coins mile!")
+            except Exception:
+                pass
+    elif existing_user[0] is None and referred_by and referred_by != user_id:
+        cursor.execute("UPDATE users SET referred_by = ? WHERE user_id = ?", (referred_by, user_id))
+        ref_reward = get_setting('referral_reward', 10)
         cursor.execute("UPDATE users SET coins = coins + ? WHERE user_id = ?", (ref_reward, referred_by))
         try:
             bot.send_message(referred_by, f"🎉 Aapke link se kisi ne join kiya! Aapko +{ref_reward} Coins mile!")
         except Exception:
             pass
+            
     conn.commit()
     conn.close()
-
-def update_coins(user_id, amount):
-    conn = sqlite3.connect('social_bot.db')
-    cursor = conn.cursor()
-    cursor.execute("UPDATE users SET coins = coins + ? WHERE user_id = ?", (amount, user_id))
-    conn.commit()
-    conn.close()
-
+    
 def set_exact_coins(user_id, amount):
     conn = sqlite3.connect('social_bot.db')
     cursor = conn.cursor()
@@ -192,7 +199,7 @@ def get_user_referral_count(user_id):
     count = cursor.fetchone()[0]
     conn.close()
     return count
-
+    
 def get_all_user_ids():
     conn = sqlite3.connect('social_bot.db')
     cursor = conn.cursor()
