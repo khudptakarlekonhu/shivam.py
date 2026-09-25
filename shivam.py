@@ -671,22 +671,24 @@ def edit_service_price_callback(call):
     user_states[user_id] = {'step': 'ADMIN_SET_PRICE', 'service_to_edit': srv_name}
     bot.answer_callback_query(call.id)
     bot.send_message(call.message.chat.id, f"💲 <b>{srv_name}</b> ka naya price (Coins) likh kar bhejein:", parse_mode="HTML")
-
-# ==================== MAIN EXECUTION ====================
-if __name__ == "__main__":
+    if __name__ == "__main__":
     init_db()
     print("✅ SQLite Database Initialized!")
     
     keep_alive()
     print("🌐 Web Server Started for Render 24/7 Hosting!")
 
-    bot.remove_webhook()
+    try:
+        bot.remove_webhook()
+    except Exception:
+        pass
+
     time.sleep(1)
 
     while True:
         try:
-            bot.infinity_polling(skip_pending_updates=True, timeout=20, long_polling_timeout=10)
+            bot.infinity_polling(timeout=20, long_polling_timeout=10)
         except Exception as e:
             print(f"❌ Error occurred: {e}")
             time.sleep(5)
-        
+            
