@@ -139,6 +139,7 @@ def set_exact_coins(user_id, amount):
 
 def get_total_users_count():
     return users_collection.count_documents({})
+
 def get_top_referrals(limit=10):
     pipeline = [
         {"$match": {"referred_by": {"$ne": None}}},
@@ -236,6 +237,7 @@ def get_instagram_menu():
     markup.add(InlineKeyboardButton(f"👁️ Views ({get_service_price('Instagram Views')} Coins)", callback_data="srv_Instagram Views"))
     markup.add(InlineKeyboardButton(f"👤 Followers ({get_service_price('Instagram Followers')} Coins)", callback_data="srv_Instagram Followers"))
     return markup
+
 def get_facebook_menu():
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton(f"👍 Likes ({get_service_price('Facebook Likes')} Coins)", callback_data="srv_Facebook Likes"))
@@ -604,26 +606,7 @@ def handle_menu(message):
             else:
                 bot.send_message(message.chat.id, "❌ Sirf number type karein!")
             del user_states[user_id]
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("srv_"))
-def process_service_select(call):
-    user_id = call.from_user.id
-    service_name = call.data.replace("srv_", "")
-
-    user_states[user_id] = {
-        'service': service_name,
-        'step': 'WAITING_LINK'
-    }
-
-    bot.answer_callback_query(call.id)
-    bot.send_message(
-        call.message.chat.id,
-        f"🎯 Selected Service: <b>{service_name}</b>\n\n"
-        f"🔗 Kripya apna <b>Target Link / Username / Details</b> bhejein:",
-        parse_mode="HTML"
-    )
-
-@bot.callback_query_handler(func=lambda call: call.data.startswith("srv_"))
+                   @bot.callback_query_handler(func=lambda call: call.data.startswith("srv_"))
 def process_service_select(call):
     user_id = call.from_user.id
     service_name = call.data.replace("srv_", "")
@@ -671,3 +654,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"❌ Error occurred: {e}")
             time.sleep(5)
+        
