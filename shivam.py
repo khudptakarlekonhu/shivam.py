@@ -606,7 +606,8 @@ def handle_menu(message):
             else:
                 bot.send_message(message.chat.id, "❌ Sirf number type karein!")
             del user_states[user_id]
-                   @bot.callback_query_handler(func=lambda call: call.data.startswith("srv_"))
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("srv_"))
 def process_service_select(call):
     user_id = call.from_user.id
     service_name = call.data.replace("srv_", "")
@@ -654,4 +655,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"❌ Error occurred: {e}")
             time.sleep(5)
-        
+            
